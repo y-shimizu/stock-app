@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}ダッシュボード | 株価分析管理画面{% endblock %}
+{% block content %}
+<h1>ダッシュボード</h1>
+
+<section class="cards">
+    <div class="card">
+        <div class="card-label">対象銘柄数</div>
+        <div class="card-value">{{ summary.total }}</div>
+    </div>
+    <div class="card up">
+        <div class="card-label">上昇銘柄</div>
+        <div class="card-value">{{ summary.gainers_count }}</div>
+    </div>
+    <div class="card down">
+        <div class="card-label">下落銘柄</div>
+        <div class="card-value">{{ summary.losers_count }}</div>
+    </div>
+    <div class="card {% if summary.avg_change >= 0 %}up{% else %}down{% endif %}">
+        <div class="card-label">平均騰落率</div>
+        <div class="card-value">{{ summary.avg_change }}%</div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>市場指数の推移（ダミー日経平均）</h2>
+    <canvas id="indexChart" height="100"></canvas>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h2>値上がり率トップ</h2>
+        <table>
+            <thead><tr><th>コード</th><th>銘柄名</th><th>株価</th><th>騰落率</th></tr></thead>
+            <tbody>
+                {% for s in summary.top_gainers %}
+                <tr>
+                    <td><a href="{{ url_for('stock_detail', code=s.code) }}">{{ s.code }}</a></td>
+                    <td>{{ s.name }}</td>
+                    <td class="num">{{ "{:,.1f}".format(s.price) }}</td>
+                    <td class="num up">+{{ s.change }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel">
+        <h2>値下がり率トップ</h2>
+        <table>
+            <thead><tr><th>コード</th><th>銘柄名</th><th>株価</th><th>騰落率</th></tr></thead>
+            <tbody>
+                {% for s in summary.top_losers %}
+                <tr>
+                    <td><a href="{{ url_for('stock_detail', code=s.code) }}">{{ s.code }}</a></td>
+                    <td>{{ s.name }}</td>
+                    <td class="num">{{ "{:,.1f}".format(s.price) }}</td>
+                    <td class="num down">{{ s.change }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>出来高ランキング</h2>
+    <table>
+        <thead><tr><th>コード</th><th>銘柄名</th><th>セクター</th><th>株価</th><th>出来高</th></tr></thead>
+        <tbody>
+            {% for s in summary.most_active %}
+            <tr>
+                <td><a href="{{ url_for('stock_detail', code=s.code) }}">{{ s.code }}</a></td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.sector }}</td>
+                <td class="num">{{ "{:,.1f}".format(s.price) }}</td>
+                <td class="num">{{ "{:,}".format(s.volume) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<script>
+fetch("{{ url_for('api_index_history') }}")
+    .then(r => r.json())
+    .then(data => {
+        const ctx = document.getElementById('indexChart');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: '日経平均(ダミー)',
+                    data: data.map(d => d.price),
+                    borderColor: '#2f80ed',
+                    backgroundColor: 'rgba(47,128,237,0.1)',
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: true } },
+                scales: { x: { ticks: { maxTicksLimit: 8 } } }
+            }
+        });
+    });
+</script>
+{% endblock %}

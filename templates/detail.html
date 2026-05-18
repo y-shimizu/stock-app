@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ stock.name }} | 株価分析管理画面{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('stocks') }}">← 銘柄一覧に戻る</a>
+<h1>{{ stock.name }} <small>({{ stock.code }})</small></h1>
+
+<section class="cards">
+    <div class="card">
+        <div class="card-label">株価</div>
+        <div class="card-value">{{ "{:,.1f}".format(stock.price) }}</div>
+    </div>
+    <div class="card {% if stock.change >= 0 %}up{% else %}down{% endif %}">
+        <div class="card-label">騰落率</div>
+        <div class="card-value">
+            {% if stock.change >= 0 %}+{% endif %}{{ stock.change }}%
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-label">出来高</div>
+        <div class="card-value">{{ "{:,}".format(stock.volume) }}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">時価総額</div>
+        <div class="card-value">{{ stock.market_cap }} 兆円</div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>株価推移</h2>
+        <div class="range-buttons">
+            <button data-days="30">1ヶ月</button>
+            <button data-days="90" class="active">3ヶ月</button>
+            <button data-days="180">6ヶ月</button>
+            <button data-days="365">1年</button>
+        </div>
+    </div>
+    <canvas id="priceChart" height="100"></canvas>
+</section>
+
+<section class="grid-2">
+    <div class="panel">
+        <h2>銘柄情報</h2>
+        <table class="kv">
+            <tr><th>銘柄コード</th><td>{{ stock.code }}</td></tr>
+            <tr><th>銘柄名</th><td>{{ stock.name }}</td></tr>
+            <tr><th>セクター</th><td>{{ stock.sector }}</td></tr>
+            <tr><th>市場区分</th><td>{{ stock.market }}</td></tr>
+        </table>
+    </div>
+    <div class="panel">
+        <h2>出来高推移</h2>
+        <canvas id="volumeChart" height="160"></canvas>
+    </div>
+</section>
+
+<script>
+const code = "{{ stock.code }}";
+let priceChart, volumeChart;
+
+function loadChart(days) {
+    fetch(`/api/stocks/${code}/history?days=${days}`)
+        .then(r => r.json())
+        .then(data => {
+            const labels = data.map(d => d.date);
+            const prices = data.map(d => d.price);
+            const volumes = data.map(d => d.volume);
+
+            if (priceChart) priceChart.destroy();
+            priceChart = new Chart(document.getElementById('priceChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: '終値',
+                        data: prices,
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39,174,96,0.12)',
+                        fill: true,
+                        tension: 0.25,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { x: { ticks: { maxTicksLimit: 8 } } }
+                }
+            });
+
+            if (volumeChart) volumeChart.destroy();
+            volumeChart = new Chart(document.getElementById('volumeChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: '出来高',
+                        data: volumes,
+                        backgroundColor: '#9b59b6',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { x: { ticks: { maxTicksLimit: 8 } } }
+                }
+            });
+        });
+}
+
+document.querySelectorAll('.range-buttons button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-buttons button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadChart(btn.dataset.days);
+    });
+});
+
+loadChart(90);
+</script>
+{% endblock %}

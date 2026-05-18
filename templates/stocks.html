@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}銘柄一覧 | 株価分析管理画面{% endblock %}
+{% block content %}
+<h1>銘柄一覧</h1>
+
+<form class="filters" method="get">
+    <input type="text" name="q" value="{{ q }}" placeholder="銘柄コード or 銘柄名で検索">
+    <select name="sector">
+        <option value="">全セクター</option>
+        {% for sec in sectors %}
+        <option value="{{ sec }}" {% if sec == sector %}selected{% endif %}>{{ sec }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">絞り込み</button>
+    <a class="link" href="{{ url_for('stocks') }}">クリア</a>
+</form>
+
+<section class="panel">
+    <table>
+        <thead>
+            <tr>
+                <th>コード</th>
+                <th>銘柄名</th>
+                <th>セクター</th>
+                <th>市場</th>
+                <th>株価</th>
+                <th>騰落率</th>
+                <th>出来高</th>
+                <th>時価総額(兆円)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in stocks %}
+            <tr>
+                <td><a href="{{ url_for('stock_detail', code=s.code) }}">{{ s.code }}</a></td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.sector }}</td>
+                <td>{{ s.market }}</td>
+                <td class="num">{{ "{:,.1f}".format(s.price) }}</td>
+                <td class="num {% if s.change >= 0 %}up{% else %}down{% endif %}">
+                    {% if s.change >= 0 %}+{% endif %}{{ s.change }}%
+                </td>
+                <td class="num">{{ "{:,}".format(s.volume) }}</td>
+                <td class="num">{{ s.market_cap }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty">該当する銘柄がありません</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
